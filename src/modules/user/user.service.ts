@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
-import { User } from '../../database/models/user.model';
+import { User, UserType } from '../../database/models/user.model';
 import { UserRepository } from './user.repository';
 import { CreateUserInput } from './dto/create-user.input';
 

@@ -1,7 +1,20 @@
 import { Column, Model, DataType, Table, HasMany } from 'sequelize-typescript';
-import { Field, ObjectType, ID } from '@nestjs/graphql';
+import { Field, ObjectType, ID, registerEnumType } from '@nestjs/graphql';
 import { Booking } from './booking.model';
 import { OTP } from './otp.model';
+import { Hotel } from './hotel.model';
+
+export enum UserType {
+  NORMAL_USER = 'NORMAL_USER',
+  HOTEL_OWNER = 'HOTEL_OWNER',
+  ADMIN = 'ADMIN'
+}
+
+// Register enum with GraphQL
+registerEnumType(UserType, {
+  name: 'UserType',
+  description: 'User type classification',
+});
 
 @ObjectType()
 @Table({
@@ -38,6 +51,21 @@ export class User extends Model<User> {
     allowNull: true,
   })
   password?: string;
+
+  @Field(() => UserType)
+  @Column({
+    type: DataType.ENUM(...Object.values(UserType)),
+    allowNull: false,
+    defaultValue: UserType.NORMAL_USER,
+  })
+  userType: UserType;
+
+  @Field(() => String, { nullable: true })
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
+  companyName?: string;
 
   @Field()
   @Column({
@@ -98,4 +126,7 @@ export class User extends Model<User> {
 
   @HasMany(() => OTP, { foreignKey: 'userId' })
   otps: OTP[];
+
+  @HasMany(() => Hotel, { foreignKey: 'ownerId' })
+  hotels: Hotel[];
 }

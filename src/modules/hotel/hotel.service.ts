@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { Hotel } from '../../database/models/hotel.model';
 import { HotelRepository } from './hotel.repository';
+import { CreateHotelInput, UpdateHotelInput, SearchHotelsInput } from './dto/hotel.input';
 
 /**
  * Hotel Service - Handles all hotel business logic and GraphQL error handling
@@ -14,17 +15,18 @@ export class HotelService {
   constructor(private readonly hotelRepository: HotelRepository) {}
 
   /**
-   * Create a new hotel in the system
+   * Create a new hotel
    * 
-   * @param createHotelDto - Hotel data including name, location, and price
-   * @returns The newly created hotel with all details
+   * @param createHotelInput - Hotel data
+   * @param ownerId - Hotel owner ID
+   * @returns Created hotel
    * 
-   * @throws GraphQLError - If input validation fails or hotel already exists
+   * @throws GraphQLError - If creation fails
    */
-  async create(createHotelDto: Partial<Hotel>): Promise<Hotel> {
+  async create(createHotelInput: CreateHotelInput, ownerId: number): Promise<Hotel> {
     try {
       // Validate input
-      if (!createHotelDto.name || createHotelDto.name.trim().length === 0) {
+      if (!createHotelInput.name || createHotelInput.name.trim().length === 0) {
         throw new GraphQLError('Hotel name is required', {
           extensions: {
             code: 'BAD_REQUEST',
@@ -32,52 +34,48 @@ export class HotelService {
           }
         });
       }
-      
-      if (!createHotelDto.location || createHotelDto.location.trim().length === 0) {
-        throw new GraphQLError('Hotel location is required', {
+
+      if (!createHotelInput.address || createHotelInput.address.trim().length === 0) {
+        throw new GraphQLError('Hotel address is required', {
           extensions: {
             code: 'BAD_REQUEST',
-            field: 'location'
-          }
-        });
-      }
-      
-      if (!createHotelDto.price || createHotelDto.price <= 0) {
-        throw new GraphQLError('Hotel price must be greater than 0', {
-          extensions: {
-            code: 'BAD_REQUEST',
-            field: 'price'
-          }
-        });
-      }
-      
-      if (createHotelDto.price > 10000) {
-        throw new GraphQLError('Hotel price cannot exceed $10,000', {
-          extensions: {
-            code: 'BAD_REQUEST',
-            field: 'price'
+            field: 'address'
           }
         });
       }
 
-      return this.hotelRepository.create(createHotelDto);
-    } catch (error) {
-      // Re-throw GraphQL errors
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
-      
-      // Handle database errors
-      if (error.code === 'P2002') {
-        throw new GraphQLError('Hotel with this name and location already exists', {
+      if (!createHotelInput.city || createHotelInput.city.trim().length === 0) {
+        throw new GraphQLError('Hotel city is required', {
           extensions: {
-            code: 'CONFLICT',
-            field: 'name'
+            code: 'BAD_REQUEST',
+            field: 'city'
           }
         });
       }
-      
-      // Handle unknown errors
+
+      const hotelData = {
+        ...createHotelInput,
+        name: createHotelInput.name.trim(),
+        address: createHotelInput.address.trim(),
+        city: createHotelInput.city.trim(),
+        state: createHotelInput.state?.trim() || createHotelInput.city.trim(),
+        country: createHotelInput.country?.trim() || createHotelInput.city.trim(),
+        postalCode: createHotelInput.postalCode?.trim() || '',
+        phone: createHotelInput.phone?.trim() || '',
+        email: createHotelInput.email?.trim() || '',
+        website: createHotelInput.website?.trim() || '',
+        description: createHotelInput.description?.trim() || '',
+        latitude: createHotelInput.latitude,
+        longitude: createHotelInput.longitude,
+        ownerId,
+        isActive: true,
+        isVerified: false,
+        rating: 0,
+        totalReviews: 0
+      };
+
+      return await this.hotelRepository.create(hotelData);
+    } catch (error) {
       throw new GraphQLError('Failed to create hotel', {
         extensions: {
           code: 'INTERNAL_SERVER_ERROR'
@@ -233,6 +231,280 @@ export class HotelService {
   }
 
   /**
+   * Get hotels by owner ID
+   * 
+   * @param ownerId - Owner ID
+   * @param limit - Maximum number of hotels to return
+   * @param offset - Number of hotels to skip
+   * @returns Array of hotels
+   */
+  async findByOwnerId(ownerId: number, limit: number = 10, offset: number = 0): Promise<Hotel[]> {
+    try {
+      // Validate owner ID
+      if (!ownerId || ownerId <= 0) {
+        throw new GraphQLError('Invalid owner ID provided', {
+          extensions: {
+            code: 'BAD_REQUEST',
+            field: 'ownerId'
+          }
+        });
+      }
+      
+      return await this.hotelRepository.findByOwnerId(ownerId, limit, offset);
+    } catch (error) {
+      // Re-throw GraphQL errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      
+      // Handle unknown errors
+      throw new GraphQLError('Failed to retrieve hotels by owner', {
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Search hotels with comprehensive filters
+   * 
+   * @param searchInput - Search criteria
+   * @returns Array of matching hotels
+   */
+  async search(searchInput: SearchHotelsInput): Promise<Hotel[]> {
+    try {
+      // Validate search input
+      if (!searchInput) {
+        throw new GraphQLError('Search input is required', {
+          extensions: {
+            code: 'BAD_REQUEST'
+          }
+        });
+      }
+      
+      return await this.hotelRepository.search(searchInput);
+    } catch (error) {
+      // Re-throw GraphQL errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      
+      // Handle unknown errors
+      throw new GraphQLError('Failed to search hotels', {
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Update hotel details
+   * 
+   * @param id - Hotel ID
+   * @param updateData - Update data
+   * @param ownerId - Owner ID for authorization
+   * @returns Updated hotel
+   */
+  async update(id: number, updateData: UpdateHotelInput, ownerId: number): Promise<Hotel> {
+    try {
+      // Validate ID
+      if (!id || id <= 0) {
+        throw new GraphQLError('Invalid hotel ID provided', {
+          extensions: {
+            code: 'BAD_REQUEST',
+            field: 'id'
+          }
+        });
+      }
+      
+      // Validate owner ID
+      if (!ownerId || ownerId <= 0) {
+        throw new GraphQLError('Invalid owner ID provided', {
+          extensions: {
+            code: 'BAD_REQUEST',
+            field: 'ownerId'
+          }
+        });
+      }
+      
+      // Validate update data
+      if (!updateData) {
+        throw new GraphQLError('Update data is required', {
+          extensions: {
+            code: 'BAD_REQUEST'
+          }
+        });
+      }
+      
+      // Check if hotel exists and belongs to owner
+      const existingHotel = await this.hotelRepository.findById(id);
+      if (!existingHotel) {
+        throw new GraphQLError('Hotel not found', {
+          extensions: {
+            code: 'NOT_FOUND'
+          }
+        });
+      }
+
+      if (existingHotel.ownerId !== ownerId) {
+        throw new GraphQLError('You can only update your own hotels', {
+          extensions: {
+            code: 'FORBIDDEN'
+          }
+        });
+      }
+      
+      return await this.hotelRepository.update(id, updateData);
+    } catch (error) {
+      // Re-throw GraphQL errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      
+      // Handle unknown errors
+      throw new GraphQLError('Failed to update hotel', {
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Delete hotel
+   * 
+   * @param id - Hotel ID
+   * @param ownerId - Owner ID for authorization
+   * @returns Success message
+   */
+  async delete(id: number, ownerId: number): Promise<{ success: boolean; message: string }> {
+    try {
+      // Validate ID
+      if (!id || id <= 0) {
+        throw new GraphQLError('Invalid hotel ID provided', {
+          extensions: {
+            code: 'BAD_REQUEST',
+            field: 'id'
+          }
+        });
+      }
+      
+      // Validate owner ID
+      if (!ownerId || ownerId <= 0) {
+        throw new GraphQLError('Invalid owner ID provided', {
+          extensions: {
+            code: 'BAD_REQUEST',
+            field: 'ownerId'
+          }
+        });
+      }
+      
+      // Check if hotel exists and belongs to owner
+      const existingHotel = await this.hotelRepository.findById(id);
+      if (!existingHotel) {
+        throw new GraphQLError('Hotel not found', {
+          extensions: {
+            code: 'NOT_FOUND'
+          }
+        });
+      }
+
+      if (existingHotel.ownerId !== ownerId) {
+        throw new GraphQLError('You can only delete your own hotels', {
+          extensions: {
+            code: 'FORBIDDEN'
+          }
+        });
+      }
+      
+      await this.hotelRepository.delete(id);
+      return {
+        success: true,
+        message: 'Hotel deleted successfully'
+      };
+    } catch (error) {
+      // Re-throw GraphQL errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      
+      // Handle unknown errors
+      throw new GraphQLError('Failed to delete hotel', {
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Toggle hotel active status
+   * 
+   * @param id - Hotel ID
+   * @param isActive - Active status
+   * @param ownerId - Owner ID for authorization
+   * @returns Updated hotel
+   */
+  async toggleActiveStatus(id: number, isActive: boolean, ownerId: number): Promise<Hotel> {
+    try {
+      // Validate ID
+      if (!id || id <= 0) {
+        throw new GraphQLError('Invalid hotel ID provided', {
+          extensions: {
+            code: 'BAD_REQUEST',
+            field: 'id'
+          }
+        });
+      }
+      
+      // Validate owner ID
+      if (!ownerId || ownerId <= 0) {
+        throw new GraphQLError('Invalid owner ID provided', {
+          extensions: {
+            code: 'BAD_REQUEST',
+            field: 'ownerId'
+          }
+        });
+      }
+      
+      // Check if hotel exists and belongs to owner
+      const existingHotel = await this.hotelRepository.findById(id);
+      if (!existingHotel) {
+        throw new GraphQLError('Hotel not found', {
+          extensions: {
+            code: 'NOT_FOUND'
+          }
+        });
+      }
+
+      if (existingHotel.ownerId !== ownerId) {
+        throw new GraphQLError('You can only modify your own hotels', {
+          extensions: {
+            code: 'FORBIDDEN'
+          }
+        });
+      }
+      
+      await this.hotelRepository.toggleActiveStatus(id, isActive);
+      return await this.hotelRepository.findById(id);
+    } catch (error) {
+      // Re-throw GraphQL errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      
+      // Handle unknown errors
+      throw new GraphQLError('Failed to toggle hotel status', {
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
    * Get the total count of hotels
    * 
    * @returns The total number of hotels in the system
@@ -241,9 +513,29 @@ export class HotelService {
    */
   async count(): Promise<number> {
     try {
-      return this.hotelRepository.count();
+      return await this.hotelRepository.count();
     } catch (error) {
       throw new GraphQLError('Failed to count hotels', {
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR'
+        }
+      });
+    }
+  }
+
+  /**
+   * Find hotels near a location (geospatial search)
+   * 
+   * @param latitude - Latitude
+   * @param longitude - Longitude
+   * @param radiusKm - Search radius in kilometers
+   * @returns Array of nearby hotels
+   */
+  async findNearby(latitude: number, longitude: number, radiusKm: number = 10): Promise<Hotel[]> {
+    try {
+      return await this.hotelRepository.findNearby(latitude, longitude, radiusKm);
+    } catch (error) {
+      throw new GraphQLError('Failed to search nearby hotels', {
         extensions: {
           code: 'INTERNAL_SERVER_ERROR'
         }

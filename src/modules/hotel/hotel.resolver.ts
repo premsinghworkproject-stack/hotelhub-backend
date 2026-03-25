@@ -1,7 +1,12 @@
 import { Resolver, Query, Args, Int, Mutation } from '@nestjs/graphql';
 import { Hotel } from '../../database/models/hotel.model';
 import { HotelService } from './hotel.service';
-import { CreateHotelInput } from './dto/create-hotel.input';
+import { CreateHotelInput, UpdateHotelInput, SearchHotelsInput } from './dto/hotel.input';
+import { UseGuards } from '@nestjs/common';
+import { GqlAuthGuard } from 'src/common/guards/auth.gaurd';
+import { AuthUser } from 'src/common/decorators/user.decorator';
+import { User } from 'src/database/models/user.model';
+import { UserTokenPayload } from 'src/common/constants/app.constant';
 
 /**
  * Hotel Resolver - Handles all hotel-related GraphQL operations
@@ -41,8 +46,9 @@ export class HotelResolver {
     name: 'createHotel',
     description: 'Create a new hotel with name, location, and price'
   })
-  async createHotel(@Args('input') input: CreateHotelInput): Promise<Hotel> {
-    return this.hotelService.create(input);
+  @UseGuards(GqlAuthGuard)
+  async createHotel(@Args('input') input: CreateHotelInput, @AuthUser() user: UserTokenPayload): Promise<Hotel> {
+    return this.hotelService.create(input, user?.sub);
   }
 
   /**
@@ -107,30 +113,125 @@ export class HotelResolver {
   }
 
   /**
-   * Search hotels by name (case-insensitive partial match)
+   * Get hotels by owner ID with pagination
+   * @param limit - Maximum number of hotels to return
+   * @param offset - Number of hotels to skip
+   * @returns Array of hotels
+   */
+  @Query(() => [Hotel], { 
+    name: 'hotelsByOwner',
+    description: 'Get hotels by owner ID with pagination'
+  })
+  async getHotelsByOwner(
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 10 }) limit: number,
+    @Args('offset', { type: () => Int, nullable: true, defaultValue: 0 }) offset: number,
+    @AuthUser() user: UserTokenPayload
+  ): Promise<Hotel[]> {
+    return this.hotelService.findByOwnerId(user.sub, limit, offset);
+  }
+
+  /**
+   * Comprehensive hotel search with multiple filters
    * 
-   * @param name - The search term for hotel name
-   * @returns Array of hotels matching the search criteria
-   * 
-   * @example
-   * ```graphql
-   * query {
-   *   searchHotels(name: "plaza") {
-   *     id
-   *     name
-   *     location
-   *     price
-   *     createdAt
-   *     updatedAt
-   *   }
-   * }
-   * ```
+   * @param searchInput - Search criteria including location, price, rating, amenities
+   * @returns Array of matching hotels
    */
   @Query(() => [Hotel], { 
     name: 'searchHotels',
-    description: 'Search hotels by name (case-insensitive partial match)'
+    description: 'Comprehensive hotel search with multiple filters'
   })
-  async searchHotels(@Args('name') name: string): Promise<Hotel[]> {
-    return this.hotelService.searchByName(name);
+  async searchHotels(@Args('input') searchInput: SearchHotelsInput): Promise<Hotel[]> {
+    return this.hotelService.search(searchInput);
+  }
+
+  /**
+   * Update hotel details
+   * 
+   * @param id - Hotel ID
+   * @param updateInput - Hotel update data
+   * @param ownerId - Owner ID for authorization
+   * @returns Updated hotel
+   */
+  @Mutation(() => Hotel, { 
+    name: 'updateHotel',
+    description: 'Update hotel details'
+  })
+  async updateHotel(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('updateInput') updateInput: UpdateHotelInput,
+    @Args('ownerId', { type: () => Int }) ownerId: number
+  ): Promise<Hotel> {
+    return this.hotelService.update(id, updateInput, ownerId);
+  }
+
+  /**
+   * Delete a hotel
+   * 
+   * @param id - Hotel ID
+   * @param ownerId - Owner ID for authorization
+   * @returns Success message
+   */
+  @Mutation(() => Hotel, { 
+    name: 'deleteHotel',
+    description: 'Delete a hotel'
+  })
+  async deleteHotel(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('ownerId', { type: () => Int }) ownerId: number
+  ): Promise<{ success: boolean; message: string }> {
+    return this.hotelService.delete(id, ownerId);
+  }
+
+  /**
+   * Toggle hotel active status
+   * 
+   * @param id - Hotel ID
+   * @param isActive - Active status
+   * @param ownerId - Owner ID for authorization
+   * @returns Updated hotel
+   */
+  @Mutation(() => Hotel, { 
+    name: 'toggleHotelActiveStatus',
+    description: 'Toggle hotel active status'
+  })
+  async toggleHotelActiveStatus(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('isActive', { type: () => Boolean }) isActive: boolean,
+    @Args('ownerId', { type: () => Int }) ownerId: number
+  ): Promise<Hotel> {
+    return this.hotelService.toggleActiveStatus(id, isActive, ownerId);
+  }
+
+  /**
+   * Get total count of hotels
+   * 
+   * @returns Number of hotels
+   */
+  @Query(() => Int, { 
+    name: 'hotelCount',
+    description: 'Get total count of hotels'
+  })
+  async getHotelCount(): Promise<number> {
+    return this.hotelService.count();
+  }
+
+  /**
+   * Find hotels near a location (geospatial search)
+   * 
+   * @param latitude - Latitude
+   * @param longitude - Longitude
+   * @param radiusKm - Search radius in kilometers
+   * @returns Array of nearby hotels
+   */
+  @Query(() => [Hotel], { 
+    name: 'searchNearby',
+    description: 'Find hotels near a location (geospatial search)'
+  })
+  async searchNearby(
+    @Args('latitude', { type: () => Number }) latitude: number,
+    @Args('longitude', { type: () => Number }) longitude: number,
+    @Args('radiusKm', { type: () => Int, nullable: true, defaultValue: 10 }) radiusKm?: number
+  ): Promise<Hotel[]> {
+    return this.hotelService.findNearby(latitude, longitude, radiusKm || 10);
   }
 }

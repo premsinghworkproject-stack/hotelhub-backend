@@ -19,7 +19,7 @@ export class EmailService {
   constructor(
     private readonly mailerService: MailerService,
     private readonly emailTemplatesService: EmailTemplatesService,
-  ) {}
+  ) { }
 
   /**
    * Send email using template type and context data
@@ -30,18 +30,16 @@ export class EmailService {
   async sendEmailTemplate(emailData: EmailData): Promise<void> {
     try {
       const { to, templateType, context } = emailData;
-      
+
       // Generate template based on type and context
       const template = this.emailTemplatesService.generateTemplate(templateType, context);
 
       await this.mailerService.sendMail({
         to,
         subject: template.subject,
-        html: template.html,
-        text: template.text,
+        html: template.html
       });
-      
-      console.log(`Email sent successfully to: ${to} using template: ${templateType}`);
+
     } catch (error) {
       console.error(`Failed to send email to ${emailData.to}:`, error);
       throw new Error(`Failed to send email: ${error.message}`);

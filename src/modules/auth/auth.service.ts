@@ -95,7 +95,9 @@ export class AuthService {
       const newUser = await this.userService.create({
         name: name.trim(),
         email: email.toLowerCase().trim(),
-        password: hashedPassword
+        password: hashedPassword,
+        userType: signupInput.userType,
+        companyName: signupInput.companyName?.trim()
       });
 
       console.log('Created user ID:', newUser.id);
@@ -202,6 +204,8 @@ export class AuthService {
         sub: user.id,
         email: user.email,
         name: user.name
+      }, {
+        expiresIn: '7d'
       });
 
       return {

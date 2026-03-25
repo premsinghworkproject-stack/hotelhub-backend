@@ -1,0 +1,326 @@
+import { InputType, Field } from '@nestjs/graphql';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, IsEnum, Min, Max, IsBoolean } from 'class-validator';
+
+export enum RoomStatus {
+  AVAILABLE = 'AVAILABLE',
+  OCCUPIED = 'OCCUPIED',
+  MAINTENANCE = 'MAINTENANCE',
+  OUT_OF_ORDER = 'OUT_OF_ORDER',
+  CLEANING = 'CLEANING'
+}
+
+@InputType()
+export class CreateRoomInput {
+  @Field()
+  @IsString()
+  @IsNotEmpty()
+  roomNumber: string;
+
+  @Field()
+  @IsString()
+  @IsOptional()
+  floor?: string;
+
+  @Field()
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  customPrice?: number;
+
+  @Field()
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @Field()
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @Field(() => RoomStatus, { nullable: true })
+  @IsOptional()
+  @IsEnum(RoomStatus)
+  status?: RoomStatus;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  isSmokingAllowed?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  isPetFriendly?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasMinibar?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasSafe?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasBalcony?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasBathtub?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasShower?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasKitchenette?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasWorkDesk?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasTV?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasWiFi?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasAirConditioning?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasHeating?: boolean;
+}
+
+@InputType()
+export class UpdateRoomInput {
+  @Field()
+  @IsString()
+  @IsOptional()
+  roomNumber?: string;
+
+  @Field()
+  @IsString()
+  @IsOptional()
+  floor?: string;
+
+  @Field()
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  customPrice?: number;
+
+  @Field()
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @Field()
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @Field(() => RoomStatus, { nullable: true })
+  @IsOptional()
+  @IsEnum(RoomStatus)
+  status?: RoomStatus;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  isSmokingAllowed?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  isPetFriendly?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasMinibar?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasSafe?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasBalcony?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasBathtub?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasShower?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasKitchenette?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasWorkDesk?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasTV?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasWiFi?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasAirConditioning?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasHeating?: boolean;
+}
+
+@InputType()
+export class SearchRoomsInput {
+  @Field()
+  @IsNumber()
+  @IsOptional()
+  roomTypeId?: number;
+
+  @Field()
+  @IsNumber()
+  @IsOptional()
+  hotelId?: number;
+
+  @Field()
+  @IsString()
+  @IsOptional()
+  roomNumber?: string;
+
+  @Field(() => RoomStatus, { nullable: true })
+  @IsOptional()
+  @IsEnum(RoomStatus)
+  status?: RoomStatus;
+
+  @Field()
+  @IsString()
+  @IsOptional()
+  floor?: string;
+
+  @Field()
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  minPrice?: number;
+
+  @Field()
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  maxPrice?: number;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  isSmokingAllowed?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  isPetFriendly?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasMinibar?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasSafe?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasBalcony?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasBathtub?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasShower?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasKitchenette?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasWorkDesk?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasTV?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasWiFi?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasAirConditioning?: boolean;
+
+  @Field()
+  @IsBoolean()
+  @IsOptional()
+  hasHeating?: boolean;
+
+  @Field()
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+
+  @Field()
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  offset?: number;
+}

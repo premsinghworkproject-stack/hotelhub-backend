@@ -1,5 +1,6 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsEnum, IsOptional } from 'class-validator';
+import { UserType } from '../../../database/models/user.model';
 
 @InputType()
 export class CreateUserInput {
@@ -17,4 +18,14 @@ export class CreateUserInput {
   @IsNotEmpty()
   @IsString()
   password: string;
+
+  @Field(() => UserType)
+  @IsEnum(UserType)
+  @IsNotEmpty()
+  userType: UserType;
+
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  companyName?: string;
 }
