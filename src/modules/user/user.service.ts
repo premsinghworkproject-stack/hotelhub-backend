@@ -130,11 +130,11 @@ export class UserService {
    * Find a user by email
    * 
    * @param email - The email address to search for
-   * @returns The user details
+   * @returns The user details or null if not found
    * 
-   * @throws GraphQLError - If email is invalid or user is not found
+   * @throws GraphQLError - If email is invalid
    */
-  async findByEmail(email: string): Promise<User> {
+  async findByEmail(email: string): Promise<User | null> {
     try {
       // Validate email
       if (!email || email.trim().length === 0) {
@@ -147,16 +147,7 @@ export class UserService {
       }
       
       const user = await this.userRepository.findByEmail(email);
-      if (!user) {
-        throw new GraphQLError('User not found', {
-          extensions: {
-            code: 'NOT_FOUND',
-            field: 'email'
-          }
-        });
-      }
-      
-      return user;
+      return user; // Return user or null, don't throw error if not found
     } catch (error) {
       // Re-throw GraphQL errors
       if (error instanceof GraphQLError) {

@@ -7,6 +7,7 @@ import { UserModule } from './modules/user/user.module';
 import { HotelModule } from './modules/hotel/hotel.module';
 import { BookingModule } from './modules/booking/booking.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ElasticsearchModule } from './modules/elasticsearch/elasticsearch.module';
 import { join } from 'path';
 import { AppController } from './app.controller';
 
@@ -29,6 +30,7 @@ import { AppController } from './app.controller';
       path: '/graphql', // Serve GraphQL on root path
     }),
     DatabaseModule,
+    ElasticsearchModule,
     UserModule,
     HotelModule,
     BookingModule,

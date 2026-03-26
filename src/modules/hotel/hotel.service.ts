@@ -267,24 +267,29 @@ export class HotelService {
   }
 
   /**
-   * Search hotels with comprehensive filters
+   * Search hotels with Elasticsearch integration
    * 
    * @param searchInput - Search criteria
    * @returns Array of matching hotels
    */
   async search(searchInput: SearchHotelsInput): Promise<Hotel[]> {
     try {
-      // Validate search input
+      // Validate search input - make it optional
       if (!searchInput) {
-        throw new GraphQLError('Search input is required', {
-          extensions: {
-            code: 'BAD_REQUEST'
-          }
-        });
+        // If no search input provided, return all active hotels with pagination
+        return await this.hotelRepository.search({});
       }
+
+      // Use Elasticsearch for text searches, fall back to SQL for simple queries
+      const shouldUseElasticsearch = this.shouldUseElasticsearch(searchInput);
       
-      return await this.hotelRepository.search(searchInput);
+      if (shouldUseElasticsearch) {
+        return await this.hotelRepository.searchWithElasticsearch(searchInput);
+      } else {
+        return await this.hotelRepository.search(searchInput);
+      }
     } catch (error) {
+      console.log(error);
       // Re-throw GraphQL errors
       if (error instanceof GraphQLError) {
         throw error;
@@ -297,6 +302,22 @@ export class HotelService {
         }
       });
     }
+  }
+
+  /**
+   * Determine if Elasticsearch should be used for search
+   * 
+   * @param searchInput - Search criteria
+   * @returns boolean indicating whether to use Elasticsearch
+   */
+  private shouldUseElasticsearch(searchInput: SearchHotelsInput): boolean {
+    // Use Elasticsearch for text searches or complex queries
+    return !!(
+      searchInput.searchQuery ||           // Text search
+      searchInput.amenities?.length ||    // Multiple amenities
+      (searchInput.minRating !== undefined && searchInput.maxRating !== undefined) || // Rating range
+      (searchInput.minPrice !== undefined && searchInput.maxPrice !== undefined)     // Price range
+    );
   }
 
   /**

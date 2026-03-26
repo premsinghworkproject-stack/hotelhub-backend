@@ -23,7 +23,7 @@ export class EmailTemplatesService {
       case EmailTemplateType.WELCOME:
         return this.generateWelcomeTemplate(context as { userName: string; userEmail: string });
       case EmailTemplateType.PASSWORD_RESET:
-        return this.generatePasswordResetTemplate(context as { resetToken: string; userName?: string });
+        return this.generatePasswordResetTemplate(context as { userName?: string });
       default:
         throw new Error(`Unknown email template type: ${templateType}`);
     }
@@ -180,8 +180,8 @@ export class EmailTemplatesService {
    * @param context - Context containing resetToken and optional userName
    * @returns Email template
    */
-  private generatePasswordResetTemplate(context: { resetToken: string; userName?: string }): EmailTemplate {
-    const { resetToken, userName } = context;
+  private generatePasswordResetTemplate(context: {  userName?: string }): EmailTemplate {
+    const { userName } = context;
     const greeting = userName ? `Hi ${userName},` : 'Hi,';
 
     return {

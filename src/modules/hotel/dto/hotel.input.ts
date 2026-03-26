@@ -232,79 +232,79 @@ export class UpdateHotelInput {
 
 @InputType()
 export class SearchHotelsInput {
-  @Field()
+  @Field({ nullable: true })
   @IsString()
   @IsOptional()
   searchQuery?: string; // Full-text search across name, description, address
 
-  @Field()
+  @Field({ nullable: true })
   @IsString()
   @IsOptional()
   city?: string;
 
-  @Field()
+  @Field({ nullable: true })
   @IsString()
   @IsOptional()
   state?: string;
 
-  @Field()
+  @Field({ nullable: true })
   @IsString()
   @IsOptional()
   country?: string;
 
-  @Field()
+  @Field({ nullable: true })
   @IsDecimal()
   @IsOptional()
   minRating?: number;
 
-  @Field()
+  @Field({ nullable: true })
   @IsDecimal()
   @IsOptional()
   maxRating?: number;
 
-  @Field()
+  @Field({ nullable: true })
   @IsNumber()
   @IsOptional()
   minPrice?: number;
 
-  @Field()
+  @Field({ nullable: true })
   @IsNumber()
   @IsOptional()
   maxPrice?: number;
 
-  @Field(() => MealPlan)
+  @Field(() => MealPlan, { nullable: true })
   @IsOptional()
   mealPlan?: MealPlan;
 
-  @Field(() => PropertyType)
+  @Field(() => PropertyType, { nullable: true })
   @IsOptional()
   propertyType?: PropertyType;
 
-  @Field(() => [String])
-  @IsString()
+  @Field(() => [String], { nullable: true })
+  @IsString({ each: true })
   @IsOptional()
   amenities?: string[]; // Array of required amenity names
 
-  @Field()
+  @Field({ nullable: true })
   @IsNumber()
   @IsOptional()
   @Min(1)
   @Max(10)
   adults?: number;
 
-  @Field()
+  @Field({ nullable: true })
   @IsNumber()
   @IsOptional()
   @Min(0)
   @Max(5)
   children?: number;
 
-  @Field()
+  @Field({ nullable: true })
   @IsString()
   @IsOptional()
   checkInDate?: string; // ISO date string
 
-  @Field()
+  @Field({ nullable: true })
   @IsString()
   @IsOptional()
   checkOutDate?: string; // ISO date string

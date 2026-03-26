@@ -459,21 +459,11 @@ export class AuthService {
         };
       }
 
-      // Get the actual OTP record for the ID
-      const otpRecord = await this.otpService.getOTPRecord(email.toLowerCase().trim(), 'PASSWORD_RESET');
-      if (!otpRecord) {
-        return {
-          success: false,
-          message: 'OTP verification failed'
-        };
-      }
-
       // Generate reset token (short-lived JWT)
       const resetToken = this.jwtService.sign(
         {
           email: email.toLowerCase().trim(),
-          type: 'PASSWORD_RESET',
-          otpId: otpRecord.id
+          type: 'PASSWORD_RESET'
         },
         { expiresIn: '15m' }
       );
@@ -603,6 +593,20 @@ export class AuthService {
         isEmailVerified: true,
         emailVerifiedAt: new Date()
       });
+
+      // Send password reset confirmation email
+      try {
+        await this.emailService.sendEmailTemplate({
+          to: email,
+          templateType: EmailTemplateType.PASSWORD_RESET,
+          context: {
+            userName: user.name
+          }
+        });
+      } catch (emailError) {
+        console.error('Failed to send password reset confirmation email:', emailError);
+        // Continue with the process even if email fails
+      }
 
       // Generate authentication token
       const token = this.jwtService.sign({
