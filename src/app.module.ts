@@ -27,12 +27,15 @@ import { AppController } from './app.controller';
         message: error.message,
         code: error.extensions?.code,
       }),
-      path: '/graphql', // Serve GraphQL on root path
+      path: '/graphql',
+      plugins: [], // Remove deprecated playground plugin
+      csrfPrevention: process.env.NODE_ENV === 'development', // Disable CSRF prevention for development
+      cache: 'bounded',
     }),
     DatabaseModule,
     ElasticsearchModule,
-    UserModule,
     HotelModule,
+    UserModule,
     BookingModule,
     AuthModule,
   ],

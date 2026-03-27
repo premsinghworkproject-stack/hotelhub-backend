@@ -76,6 +76,11 @@ export class HotelService {
 
       return await this.hotelRepository.create(hotelData);
     } catch (error) {
+      // Re-throw GraphQL errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      
       throw new GraphQLError('Failed to create hotel', {
         extensions: {
           code: 'INTERNAL_SERVER_ERROR'
@@ -289,7 +294,6 @@ export class HotelService {
         return await this.hotelRepository.search(searchInput);
       }
     } catch (error) {
-      console.log(error);
       // Re-throw GraphQL errors
       if (error instanceof GraphQLError) {
         throw error;

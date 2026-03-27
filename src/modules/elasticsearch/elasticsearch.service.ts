@@ -1,7 +1,5 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Client } from '@elastic/elasticsearch';
-import { SearchHotelsInput } from '../hotel/dto/hotel.input';
-import { ELASTICSEARCH_CLIENT } from './elasticsearch.module';
 
 export interface HotelSearchResult {
   hits: {
@@ -19,15 +17,36 @@ export interface HotelSearchResult {
 export class ElasticsearchService {
   private readonly logger = new Logger(ElasticsearchService.name);
   private readonly hotelIndex = 'hotels';
+  private readonly client: Client;
 
-  constructor(@Inject(ELASTICSEARCH_CLIENT) private readonly client: Client) {}
+  constructor() {
+    this.client = new Client({
+      node: process.env.ELASTICSEARCH_NODE || 'http://localhost:9200',
+
+      auth: process.env.ELASTICSEARCH_USERNAME
+        ? {
+          username: process.env.ELASTICSEARCH_USERNAME,
+          password: process.env.ELASTICSEARCH_PASSWORD,
+        }
+        : undefined,
+
+      maxRetries: 3,
+      requestTimeout: 30000,
+
+      sniffOnStart: false,
+      sniffInterval: false,
+      sniffOnConnectionFault: false,
+    });
+
+    this.logger.log('Elasticsearch client initialized');
+  }
 
   /**
    * Check if Elasticsearch is available
    */
   async isHealthy(): Promise<boolean> {
     try {
-      await this.client.ping();
+      await this.client.info(); // ✅ safer
       return true;
     } catch (error) {
       this.logger.error('Elasticsearch is not available', error);
@@ -36,58 +55,86 @@ export class ElasticsearchService {
   }
 
   /**
-   * Create hotel index with proper mapping
+   * Create hotel index with proper mapping (drops and recreates for fresh schema)
    */
   async createHotelIndex(): Promise<void> {
     try {
+      // Check if index exists and drop it
       const exists = await this.client.indices.exists({
         index: this.hotelIndex,
       });
 
       if (exists) {
-        this.logger.log(`Index ${this.hotelIndex} already exists`);
-        return;
+        this.logger.log(`Dropping existing index ${this.hotelIndex} for fresh recreation`);
+        await this.client.indices.delete({
+          index: this.hotelIndex,
+        });
       }
 
+      // Create fresh index with updated mapping
       await this.client.indices.create({
         index: this.hotelIndex,
         mappings: {
           properties: {
             id: { type: 'integer' },
-            name: { 
+            name: {
               type: 'text',
               analyzer: 'standard',
               fields: {
-                keyword: { type: 'keyword' }
+                keyword: { type: 'keyword' },
+                suggest: {
+                  type: 'completion'
+                }
               }
             },
-            description: { 
-              type: 'text',
-              analyzer: 'standard'
-            },
-            address: { 
-              type: 'text',
-              analyzer: 'standard'
-            },
-            city: { 
+            description: {
               type: 'text',
               analyzer: 'standard',
               fields: {
-                keyword: { type: 'keyword' }
+                keyword: { type: 'keyword' },
+                suggest: {
+                  type: 'completion'
+                }
               }
             },
-            state: { 
+            address: {
               type: 'text',
               analyzer: 'standard',
               fields: {
-                keyword: { type: 'keyword' }
+                keyword: { type: 'keyword' },
+                suggest: {
+                  type: 'completion'
+                }
               }
             },
-            country: { 
+            city: {
               type: 'text',
               analyzer: 'standard',
               fields: {
-                keyword: { type: 'keyword' }
+                keyword: { type: 'keyword' },
+                suggest: {
+                  type: 'completion'
+                }
+              }
+            },
+            state: {
+              type: 'text',
+              analyzer: 'standard',
+              fields: {
+                keyword: { type: 'keyword' },
+                suggest: {
+                  type: 'completion'
+                }
+              }
+            },
+            country: {
+              type: 'text',
+              analyzer: 'standard',
+              fields: {
+                keyword: { type: 'keyword' },
+                suggest: {
+                  type: 'completion'
+                }
               }
             },
             rating: { type: 'float' },
@@ -105,7 +152,7 @@ export class ElasticsearchService {
         },
       });
 
-      this.logger.log(`Created index ${this.hotelIndex}`);
+      this.logger.log(`Created fresh index ${this.hotelIndex} with updated schema`);
     } catch (error) {
       this.logger.error(`Failed to create index ${this.hotelIndex}`, error);
       throw error;
@@ -117,10 +164,11 @@ export class ElasticsearchService {
    */
   async indexHotel(hotel: any): Promise<void> {
     try {
-      await this.client.index({
+      await this.client.update({
         index: this.hotelIndex,
         id: hotel.id.toString(),
-        body: hotel,
+        doc: hotel,
+        doc_as_upsert: true
       });
     } catch (error) {
       this.logger.error(`Failed to index hotel ${hotel.id}`, error);
@@ -149,29 +197,54 @@ export class ElasticsearchService {
   /**
    * Search hotels using Elasticsearch
    */
-  async searchHotels(searchInput: SearchHotelsInput): Promise<HotelSearchResult> {
+  async searchHotels(searchInput: any): Promise<HotelSearchResult> {
     try {
       const query: any = {
         bool: {
-          must: [{ term: { isActive: true } }],
+          must: [], // only for text search
+          filter: [
+            { term: { isActive: true } } // strict filtering
+          ],
         },
       };
 
       // Full-text search across multiple fields
       if (searchInput.searchQuery) {
+        // query.bool.must.push({
+        //   multi_match: {
+        //     query: searchInput.searchQuery,
+        //     fields: [
+        //       'name^3',           // Higher weight for name
+        //       'city^2',           // Higher weight for city
+        //       'state^2',          // Higher weight for state
+        //       'country^2',        // Higher weight for country
+        //       'description',
+        //       'address',
+        //     ],
+        //     type: 'best_fields',
+        //     fuzziness: 'AUTO',
+        //   },
+        // });
+
         query.bool.must.push({
-          multi_match: {
-            query: searchInput.searchQuery,
-            fields: [
-              'name^3',           // Higher weight for name
-              'city^2',           // Higher weight for city
-              'state^2',          // Higher weight for state
-              'country^2',        // Higher weight for country
-              'description',
-              'address',
+          bool: {
+            should: [
+              {
+                multi_match: {
+                  query: searchInput.searchQuery,
+                  fields: ['name^3', 'description', 'address'],
+                  fuzziness: 'AUTO',
+                },
+              },
+              {
+                match_phrase: {
+                  name: {
+                    query: searchInput.searchQuery,
+                    boost: 5,
+                  },
+                },
+              },
             ],
-            type: 'best_fields',
-            fuzziness: 'AUTO',
           },
         });
       }
@@ -318,6 +391,153 @@ export class ElasticsearchService {
     } catch (error) {
       this.logger.error(`Failed to get hotel ${hotelId} from Elasticsearch`, error);
       return null;
+    }
+  }
+
+  /**
+   * Hotel search autocomplete using Elasticsearch completion suggester
+   */
+  async autocompleteHotelSearch(query: string): Promise<any[]> {
+    try {
+      const response = await this.client.search({
+        index: this.hotelIndex,
+        body: {
+          suggest: {
+            hotel_suggest: {
+              prefix: query,
+              completion: {
+                field: 'name.suggest',
+                size: 10,
+                skip_duplicates: true,
+              },
+            },
+            city_suggest: {
+              prefix: query,
+              completion: {
+                field: 'city.suggest',
+                size: 5,
+                skip_duplicates: true,
+              },
+            },
+          },
+        },
+      });
+
+      const hotelSuggestions = Array.isArray(response.suggest.hotel_suggest[0]?.options)
+        ? response.suggest.hotel_suggest[0].options
+        : [];
+      const citySuggestions = Array.isArray(response.suggest.city_suggest[0]?.options)
+        ? response.suggest.city_suggest[0].options
+        : [];
+
+      // Combine and format suggestions
+      const suggestions = [
+        ...hotelSuggestions.map((option: any) => ({
+          type: 'hotel',
+          text: option.text,
+          hotel: option._source,
+          score: option._score,
+        })),
+        ...citySuggestions.map((option: any) => ({
+          type: 'city',
+          text: `${option.text} hotels`,
+          city: option.text,
+          hotel: option._source,
+          score: option._score,
+        }))
+      ];
+
+      // Sort by score and limit results
+      return suggestions
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8);
+    } catch (error) {
+      this.logger.error('Failed to get autocomplete suggestions', error);
+      return [];
+    }
+  }
+
+  /**
+   * Advanced autocomplete with multiple fields and patterns
+   */
+  async advancedAutocomplete(query: string): Promise<any[]> {
+    try {
+      const response = await this.client.search({
+        index: this.hotelIndex,
+        body: {
+          size: 8,
+          query: {
+            bool: {
+              should: [
+                // Exact name matches
+                {
+                  match: {
+                    'name.keyword': {
+                      query: query,
+                      boost: 3.0
+                    }
+                  }
+                },
+                // Partial name matches
+                {
+                  match_phrase_prefix: {
+                    name: {
+                      query: query,
+                      boost: 2.0
+                    }
+                  }
+                },
+                // City matches
+                {
+                  match: {
+                    'city.keyword': {
+                      query: query,
+                      boost: 1.5
+                    }
+                  }
+                },
+                // Description contains query
+                {
+                  match: {
+                    description: {
+                      query: query,
+                      boost: 1.0
+                    }
+                  }
+                },
+                // Address matches
+                {
+                  match_phrase_prefix: {
+                    address: {
+                      query: query,
+                      boost: 1.2
+                    }
+                  }
+                }
+              ],
+              filter: [
+                { term: { isActive: true } }
+              ],
+              minimum_should_match: 1
+            }
+          },
+          _source: ['id', 'name', 'city', 'state', 'country', 'rating', 'address'],
+          sort: [
+            { _score: { order: 'desc' } },
+            { rating: { order: 'desc' } }
+          ]
+        }
+      });
+
+      return response.hits.hits.map((hit: any) => ({
+        type: 'hotel',
+        text: `${hit._source.name} - ${hit._source.city}, ${hit._source.state}`,
+        hotel: hit._source,
+        score: hit._score,
+      }));
+    } catch (error) {
+      this.logger.error('Failed to get advanced autocomplete suggestions', error);
+      return [];
     }
   }
 }

@@ -3,7 +3,7 @@ import { UseGuards } from '@nestjs/common';
 import { Room } from '../../database/models/room.model';
 import { RoomService } from './room.service';
 import { CreateRoomInput, UpdateRoomInput, SearchRoomsInput } from './dto/room.input';
-import { GqlAuthGuard } from 'src/common/guards/auth.gaurd';
+import { GqlAuthGuard } from 'src/common/guards/auth.guard';
 import { AuthUser } from 'src/common/decorators/user.decorator';
 import { UserTokenPayload } from 'src/common/constants/app.constant';
 

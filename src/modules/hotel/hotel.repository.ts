@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, forwardRef, Inject, Optional, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Hotel } from '../../database/models/hotel.model';
 import { RoomType } from '../../database/models/room-type.model';
@@ -9,10 +9,14 @@ import { SearchHotelsInput } from './dto/hotel.input';
 
 @Injectable()
 export class HotelRepository {
+  private readonly logger = new Logger(HotelRepository.name);
+
   constructor(
     @InjectModel(Hotel)
     private hotelModel: typeof Hotel,
-    private readonly elasticsearchService: ElasticsearchService,
+    @Optional()
+    @Inject(forwardRef(() => ElasticsearchService))
+    private readonly elasticsearchService?: ElasticsearchService,
   ) {}
 
   /**
@@ -73,6 +77,12 @@ export class HotelRepository {
     });
   }
 
+  async findAllForElasticsearch(): Promise<Hotel[]> {
+    return await this.hotelModel.findAll({
+      order: [['name', 'ASC']]
+    });
+  }
+
   /**
    * Search hotels with comprehensive filters
    * 
@@ -120,10 +130,8 @@ export class HotelRepository {
       };
     }
 
-    // Price filters (temporarily disabled due to room types schema issue)
+    // Price filters
     if (searchInput.minPrice !== undefined || searchInput.maxPrice !== undefined) {
-      // Temporarily disabled price filtering until room types schema is fixed
-      console.log('Price filtering temporarily disabled - room types schema needs updating');
       // TODO: Re-enable when room types database schema matches model
     }
 
@@ -137,25 +145,19 @@ export class HotelRepository {
       whereConditions.propertyType = searchInput.propertyType;
     }
 
-    // Amenities filter (temporarily disabled for testing)
+    // Amenities filter
     if (searchInput.amenities && searchInput.amenities.length > 0) {
-      // For now, skip amenities filtering to test basic functionality
-      console.log('Amenities filtering temporarily disabled for testing');
       // TODO: Implement proper amenities filtering with HotelAmenity model
     }
 
-    // Guest count filter (temporarily disabled for testing)
+    // Guest count filter
     if (searchInput.adults !== undefined) {
-      // For now, skip guest count filtering to test basic functionality
-      console.log('Guest count filtering temporarily disabled for testing');
       // TODO: Implement proper guest count filtering with roomTypes.maxOccupancy
     }
 
     // Date availability filter (simplified - for now skip date filtering until room availability is implemented)
     if (searchInput.checkInDate && searchInput.checkOutDate) {
-      // For now, we'll skip date filtering as it requires complex room availability checking
-      // In a real system, you would check room availability for the date range
-      console.log('Date availability filtering not yet implemented - would check room availability');
+      // TODO: Implement date availability checking with room availability
     }
 
     const queryOptions: any = {
@@ -236,9 +238,12 @@ export class HotelRepository {
   async searchWithElasticsearch(searchInput: SearchHotelsInput): Promise<Hotel[]> {
     try {
       // Check if Elasticsearch is available
+      if (!this.elasticsearchService) {
+        return this.search(searchInput);
+      }
+
       const isHealthy = await this.elasticsearchService.isHealthy();
       if (!isHealthy) {
-        console.log('Elasticsearch is not available, falling back to SQL search');
         return this.search(searchInput);
       }
 
@@ -275,13 +280,13 @@ export class HotelRepository {
         ],
       });
 
-      // Sort hotels according to Elasticsearch score order
-      const hotelMap = new Map(hotels.map(hotel => [hotel.id, hotel]));
-      const sortedHotels = hotelIds
-        .map(id => hotelMap.get(id))
-        .filter(hotel => hotel !== undefined);
+      // // Sort hotels according to Elasticsearch score order
+      // const hotelMap = new Map(hotels.map(hotel => [hotel.id, hotel]));
+      // const sortedHotels = hotelIds
+      //   .map(id => hotelMap.get(id))
+      //   .filter(hotel => hotel !== undefined);
 
-      return sortedHotels;
+      return hotels;
     } catch (error) {
       console.error('Elasticsearch search failed, falling back to SQL search:', error);
       return this.search(searchInput);
@@ -295,15 +300,18 @@ export class HotelRepository {
    */
   async indexHotelInElasticsearch(hotel: Hotel): Promise<void> {
     try {
+      if (!this.elasticsearchService) {
+        return;
+      }
+
       const isHealthy = await this.elasticsearchService.isHealthy();
       if (!isHealthy) {
-        console.log('Elasticsearch is not available, skipping indexing');
         return;
       }
 
       await this.elasticsearchService.indexHotel(hotel);
     } catch (error) {
-      console.error('Failed to index hotel in Elasticsearch:', error);
+      this.logger.error('Failed to index hotel in Elasticsearch:', error);
     }
   }
 
@@ -314,9 +322,13 @@ export class HotelRepository {
    */
   async deleteHotelFromElasticsearch(hotelId: number): Promise<void> {
     try {
+      if (!this.elasticsearchService) {
+        return;
+      }
+
       await this.elasticsearchService.deleteHotel(hotelId);
     } catch (error) {
-      console.error('Failed to delete hotel from Elasticsearch:', error);
+      this.logger.error('Failed to delete hotel from Elasticsearch:', error);
     }
   }
 

@@ -1,30 +1,19 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Module, Global } from '@nestjs/common';
 import { ElasticsearchService } from './elasticsearch.service';
-import { Client } from '@elastic/elasticsearch';
+import { ElasticsearchSyncService } from './elasticsearch-sync.service';
+import { ElasticsearchController } from './elasticsearch.controller';
+import { ElasticsearchResolver } from './elasticsearch.resolver';
+import { ScheduleModule } from '@nestjs/schedule';
+import { HotelModule } from '../hotel/hotel.module';
 
-export const ELASTICSEARCH_CLIENT = 'ELASTICSEARCH_CLIENT';
-
+@Global()
 @Module({
-  imports: [ConfigModule],
-  providers: [
-    {
-      provide: ELASTICSEARCH_CLIENT,
-      useFactory: async (configService: ConfigService) => {
-        return new Client({
-          node: configService.get('ELASTICSEARCH_NODE') || 'http://localhost:9200',
-          auth: configService.get('ELASTICSEARCH_USERNAME') ? 
-            { username: configService.get('ELASTICSEARCH_USERNAME'), password: configService.get('ELASTICSEARCH_PASSWORD') } : 
-            undefined,
-          maxRetries: 3,
-          requestTimeout: 30000,
-          pingTimeout: 3000,
-        });
-      },
-      inject: [ConfigService],
-    },
-    ElasticsearchService,
+  imports: [
+    ScheduleModule.forRoot(),
+    HotelModule,
   ],
-  exports: [ElasticsearchService, ELASTICSEARCH_CLIENT],
+  controllers: [ElasticsearchController],
+  providers: [ElasticsearchService, ElasticsearchSyncService, ElasticsearchResolver],
+  exports: [ElasticsearchService, ElasticsearchSyncService],
 })
 export class ElasticsearchModule {}

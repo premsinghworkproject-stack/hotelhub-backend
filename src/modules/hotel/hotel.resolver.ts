@@ -3,7 +3,7 @@ import { Hotel } from '../../database/models/hotel.model';
 import { HotelService } from './hotel.service';
 import { CreateHotelInput, UpdateHotelInput, SearchHotelsInput } from './dto/hotel.input';
 import { UseGuards } from '@nestjs/common';
-import { GqlAuthGuard } from 'src/common/guards/auth.gaurd';
+import { GqlAuthGuard } from 'src/common/guards/auth.guard';
 import { AuthUser } from 'src/common/decorators/user.decorator';
 import { User } from 'src/database/models/user.model';
 import { UserTokenPayload } from 'src/common/constants/app.constant';

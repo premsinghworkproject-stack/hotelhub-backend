@@ -29,10 +29,10 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: ['http://localhost:3000'], // Next.js
+    origin: ['http://localhost:3000', 'http://localhost:8200'], // Next.js and local development
     credentials: true,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Apollo-Require-Preflight', 'x-apollo-operation-name'],
   });
 
   // Swagger documentation (only in development)

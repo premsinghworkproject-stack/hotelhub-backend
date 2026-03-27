@@ -321,6 +321,8 @@ export class AuthService {
         sub: user.id,
         email: user.email,
         name: user.name
+      }, {
+        expiresIn: '7d'
       });
 
       return {
@@ -411,6 +413,10 @@ export class AuthService {
       };
 
     } catch (error) {
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+
       console.error('Forgot password error:', error);
       throw new GraphQLError('Failed to process forgot password request', {
         extensions: {
@@ -475,6 +481,10 @@ export class AuthService {
       };
 
     } catch (error) {
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+
       console.error('Verify forgot password OTP error:', error);
       throw new GraphQLError('Failed to verify OTP', {
         extensions: {
@@ -621,6 +631,10 @@ export class AuthService {
       };
 
     } catch (error) {
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+
       console.error('Reset password error:', error);
       throw new GraphQLError('Failed to reset password', {
         extensions: {

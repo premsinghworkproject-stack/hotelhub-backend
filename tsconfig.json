@@ -9,6 +9,7 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "./",
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
@@ -20,6 +21,15 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "strict": false,
-    "moduleResolution": "node"
-  }
+    "moduleResolution": "node",
+    "strictPropertyInitialization": false,
+    "types": ["jest", "node"]
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
 }

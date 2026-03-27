@@ -1,5 +1,6 @@
 import { InputType, Field, registerEnumType } from '@nestjs/graphql';
 import { IsString, IsNotEmpty, IsOptional, IsNumber, IsDecimal, IsEnum, Min, Max, IsBoolean } from 'class-validator';
+import { SearchHotelsInput as ISearchHotelsInput } from '../../../common/interfaces/search-hotels.input';
 
 export enum MealPlan {
   NONE = 'NONE',
@@ -231,7 +232,7 @@ export class UpdateHotelInput {
 }
 
 @InputType()
-export class SearchHotelsInput {
+export class SearchHotelsInput implements ISearchHotelsInput {
   @Field({ nullable: true })
   @IsString()
   @IsOptional()
