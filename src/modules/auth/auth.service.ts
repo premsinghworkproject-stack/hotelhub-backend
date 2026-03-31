@@ -210,7 +210,8 @@ export class AuthService {
 
       return {
         success: true,
-        token
+        token,
+        user
       };
     } catch (error) {
       if (error instanceof GraphQLError) {
@@ -328,7 +329,8 @@ export class AuthService {
       return {
         success: true,
         token,
-        message: 'OTP verified successfully'
+        message: 'OTP verified successfully',
+        user
       };
     } catch (error) {
       if (error instanceof GraphQLError) {
@@ -627,7 +629,8 @@ export class AuthService {
       return {
         success: true,
         token,
-        message: 'Password reset successful'
+        message: 'Password reset successful',
+        user
       };
 
     } catch (error) {

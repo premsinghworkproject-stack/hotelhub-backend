@@ -1,7 +1,8 @@
 import { Resolver, Query, Args, Int, Mutation } from '@nestjs/graphql';
 import { Hotel } from '../../database/models/hotel.model';
 import { HotelService } from './hotel.service';
-import { CreateHotelInput, UpdateHotelInput, SearchHotelsInput } from './dto/hotel.input';
+import { SearchHotelsInput } from './dto/hotel.input';
+import { CreateHotelWithUrlsInput, UpdateHotelWithUrlsInput } from './dto/hotel-with-urls.input';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from 'src/common/guards/auth.guard';
 import { AuthUser } from 'src/common/decorators/user.decorator';
@@ -17,39 +18,6 @@ import { UserTokenPayload } from 'src/common/constants/app.constant';
 @Resolver(() => Hotel)
 export class HotelResolver {
   constructor(private readonly hotelService: HotelService) {}
-
-  /**
-   * Create a new hotel in the system
-   * 
-   * @param input - Hotel data including name, location, and price
-   * @returns The newly created hotel with all details
-   * 
-   * @example
-   * ```graphql
-   * mutation {
-   *   createHotel(input: {
-   *     name: "Grand Plaza Hotel",
-   *     location: "New York, NY",
-   *     price: 250.00
-   *   }) {
-   *     id
-   *     name
-   *     location
-   *     price
-   *     createdAt
-   *     updatedAt
-   *   }
-   * }
-   * ```
-   */
-  @Mutation(() => Hotel, { 
-    name: 'createHotel',
-    description: 'Create a new hotel with name, location, and price'
-  })
-  @UseGuards(GqlAuthGuard)
-  async createHotel(@Args('input') input: CreateHotelInput, @AuthUser() user: UserTokenPayload): Promise<Hotel> {
-    return this.hotelService.create(input, user?.sub);
-  }
 
   /**
    * Get a specific hotel by its ID
@@ -145,26 +113,6 @@ export class HotelResolver {
   }
 
   /**
-   * Update hotel details
-   * 
-   * @param id - Hotel ID
-   * @param updateInput - Hotel update data
-   * @param ownerId - Owner ID for authorization
-   * @returns Updated hotel
-   */
-  @Mutation(() => Hotel, { 
-    name: 'updateHotel',
-    description: 'Update hotel details'
-  })
-  async updateHotel(
-    @Args('id', { type: () => Int }) id: number,
-    @Args('updateInput') updateInput: UpdateHotelInput,
-    @Args('ownerId', { type: () => Int }) ownerId: number
-  ): Promise<Hotel> {
-    return this.hotelService.update(id, updateInput, ownerId);
-  }
-
-  /**
    * Delete a hotel
    * 
    * @param id - Hotel ID
@@ -233,5 +181,45 @@ export class HotelResolver {
     @Args('radiusKm', { type: () => Int, nullable: true, defaultValue: 10 }) radiusKm?: number
   ): Promise<Hotel[]> {
     return this.hotelService.findNearby(latitude, longitude, radiusKm || 10);
+  }
+
+  /**
+   * Create a new hotel with image URLs
+   * 
+   * @param input - Hotel data with image URLs
+   * @param user - Authenticated user
+   * @returns Created hotel
+   */
+  @Mutation(() => Hotel, { 
+    name: 'createHotelWithUrls',
+    description: 'Create a new hotel with image URLs (separate file upload)'
+  })
+  @UseGuards(GqlAuthGuard)
+  async createHotelWithUrls(
+    @Args('input') input: CreateHotelWithUrlsInput,
+    @AuthUser() user: UserTokenPayload
+  ): Promise<Hotel> {
+    return this.hotelService.createWithUrls(input, user.sub);
+  }
+
+  /**
+   * Update a hotel with image URLs
+   * 
+   * @param id - Hotel ID
+   * @param input - Hotel update data with image URLs
+   * @param user - Authenticated user
+   * @returns Updated hotel
+   */
+  @Mutation(() => Hotel, { 
+    name: 'updateHotelWithUrls',
+    description: 'Update a hotel with image URLs (separate file upload)'
+  })
+  @UseGuards(GqlAuthGuard)
+  async updateHotelWithUrls(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('input') input: UpdateHotelWithUrlsInput,
+    @AuthUser() user: UserTokenPayload
+  ): Promise<Hotel> {
+    return this.hotelService.updateWithUrls(id, input, user.sub);
   }
 }

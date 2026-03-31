@@ -21,7 +21,7 @@ export class RoomTypeResolver {
   }
 
   @Query(() => [RoomType])
-  async searchRoomTypes(@Args() searchInput: SearchRoomTypesInput): Promise<RoomType[]> {
+  async searchRoomTypes(@Args('searchInput') searchInput: SearchRoomTypesInput): Promise<RoomType[]> {
     return await this.roomTypeService.search(searchInput);
   }
 

@@ -1,7 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { OTP } from '../../database/models/otp.model';
 import { OTPRepository } from './otp.repository';
+import { OTPStatusResponse } from './otp.types';
 
 @Injectable()
 export class OTPService {
@@ -104,14 +105,14 @@ export class OTPService {
    * 
    * @throws GraphQLError - If status check fails
    */
-  async checkOTPStatus(email: string): Promise<{ hasActiveOTP: boolean; expiresAt?: Date }> {
+  async checkOTPStatus(email: string): Promise<OTPStatusResponse> {
     try {
       const existingOTP = await this.otpRepository.findByEmail(email);
       
       if (!existingOTP) {
         return { hasActiveOTP: false };
       }
-
+      
       return {
         hasActiveOTP: true,
         expiresAt: existingOTP.expiresAt,

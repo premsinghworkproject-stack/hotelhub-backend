@@ -184,6 +184,12 @@ export class RoomType extends Model<RoomType> {
   })
   hotelId: number;
 
+  // Virtual field for room count
+  @Field(() => Number, { nullable: true })
+  get roomCount(): number {
+    return this.rooms?.length || 0;
+  }
+
   @Field(() => Date)
   @Column({
     type: DataType.DATE,

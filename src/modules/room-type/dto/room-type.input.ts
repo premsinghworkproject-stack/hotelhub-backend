@@ -254,7 +254,7 @@ export class SearchRoomTypesInput {
   @Min(1)
   maxOccupancy?: number;
 
-  @Field()
+  @Field(() => [String], { nullable: true })
   @IsString()
   @IsOptional()
   amenities?: string[];

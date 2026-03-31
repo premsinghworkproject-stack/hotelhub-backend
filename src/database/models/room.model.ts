@@ -1,8 +1,9 @@
-import { Column, Model, DataType, Table, BelongsTo, HasMany } from 'sequelize-typescript';
-import { Field, ObjectType, ID } from '@nestjs/graphql';
+import { Column, Model, DataType, Table, HasMany, BelongsTo } from 'sequelize-typescript';
+import { Field, ObjectType, ID, registerEnumType } from '@nestjs/graphql';
 import { Hotel } from './hotel.model';
 import { RoomType } from './room-type.model';
 import { Booking } from './booking.model';
+import { RoomImage } from './room-image.model';
 
 export enum RoomStatus {
   AVAILABLE = 'AVAILABLE',
@@ -220,4 +221,13 @@ export class Room extends Model<Room> {
 
   @HasMany(() => Booking, { foreignKey: 'roomId' })
   bookings: Booking[];
+
+  @HasMany(() => RoomImage, { foreignKey: 'roomId' })
+  images: RoomImage[];
 }
+
+// Register enum with GraphQL
+registerEnumType(RoomStatus, {
+  name: 'RoomStatus',
+  description: 'Room status classification',
+});

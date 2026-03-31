@@ -1,4 +1,5 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { User, UserType } from '../../database/models/user.model';
 
 @ObjectType()
 export class AuthResponse {
@@ -8,16 +9,19 @@ export class AuthResponse {
   @Field(() => String, { nullable: true })
   message?: string;
 
-  @Field()
+  @Field(() => Boolean)
   success: boolean;
+
+  @Field(() => User, { nullable: true })
+  user?: User;
 }
 
 @ObjectType()
 export class OTPResponse {
-  @Field()
+  @Field(() => String)
   message: string;
 
-  @Field()
+  @Field(() => Boolean)
   success: boolean;
 
   @Field(() => String, { nullable: true })
@@ -32,19 +36,22 @@ export class LoginResponse {
   @Field(() => String, { nullable: true })
   message?: string;
 
-  @Field()
+  @Field(() => Boolean)
   success: boolean;
 
   @Field(() => Boolean, { nullable: true })
   requiresOTP?: boolean;
+
+  @Field(() => User, { nullable: true })
+  user?: User;
 }
 
 @ObjectType()
 export class ForgotPasswordResponse {
-  @Field()
+  @Field(() => String)
   message: string;
 
-  @Field()
+  @Field(() => Boolean)
   success: boolean;
 
   @Field(() => String, { nullable: true })
@@ -56,10 +63,10 @@ export class ForgotPasswordResponse {
 
 @ObjectType()
 export class VerifyForgotPasswordOTPResponse {
-  @Field()
+  @Field(() => String)
   message: string;
 
-  @Field()
+  @Field(() => Boolean)
   success: boolean;
 
   @Field(() => String, { nullable: true })

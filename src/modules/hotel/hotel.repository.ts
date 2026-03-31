@@ -2,6 +2,8 @@ import { Injectable, forwardRef, Inject, Optional, Logger } from '@nestjs/common
 import { InjectModel } from '@nestjs/sequelize';
 import { Hotel } from '../../database/models/hotel.model';
 import { RoomType } from '../../database/models/room-type.model';
+import { Room } from '../../database/models/room.model';
+import { HotelImage } from '../../database/models/hotel-image.model';
 import { HotelAmenity } from '../../database/models/hotel-amenity.model';
 import { Op } from 'sequelize';
 import { ElasticsearchService } from '../elasticsearch/elasticsearch.service';
@@ -58,7 +60,25 @@ export class HotelRepository {
       where: { ownerId },
       order: [['createdAt', 'DESC']],
       limit,
-      offset
+      offset,
+      include: [
+        {
+          model: HotelImage,
+          as: 'images',
+          order: [['sortOrder', 'ASC']]
+        },
+        {
+          model: RoomType,
+          as: 'roomTypes',
+          include: [
+            {
+              model: Room,
+              as: 'rooms',
+              attributes: ['id'] // Only count the rooms, don't need all room data
+            }
+          ]
+        }
+      ]
     });
   }
 

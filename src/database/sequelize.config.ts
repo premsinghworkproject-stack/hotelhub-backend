@@ -12,6 +12,7 @@ import { HotelAmenity } from './models/hotel-amenity.model';
 import { HotelImage } from './models/hotel-image.model';
 import { RoomTypeAmenity } from './models/room-type-amenity.model';
 import { RoomTypeImage } from './models/room-type-image.model';
+import { RoomImage } from './models/room-image.model';
 import { Review } from './models/review.model';
 
 export const getDatabaseConfig = (configService: ConfigService): SequelizeModuleOptions => {
@@ -35,6 +36,7 @@ export const getDatabaseConfig = (configService: ConfigService): SequelizeModule
       HotelImage,
       RoomTypeAmenity,
       RoomTypeImage,
+      RoomImage,
       Review,
     ],
     logging: isDevelopment ? console.log : false,

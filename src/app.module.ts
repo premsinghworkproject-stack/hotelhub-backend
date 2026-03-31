@@ -5,9 +5,12 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
 import { UserModule } from './modules/user/user.module';
 import { HotelModule } from './modules/hotel/hotel.module';
+import { RoomTypeModule } from './modules/room-type/room-type.module';
+import { RoomModule } from './modules/room/room.module';
 import { BookingModule } from './modules/booking/booking.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ElasticsearchModule } from './modules/elasticsearch/elasticsearch.module';
+import { CommonModule } from './common/common.module';
 import { join } from 'path';
 import { AppController } from './app.controller';
 
@@ -34,7 +37,10 @@ import { AppController } from './app.controller';
     }),
     DatabaseModule,
     ElasticsearchModule,
+    CommonModule,
     HotelModule,
+    RoomTypeModule,
+    RoomModule,
     UserModule,
     BookingModule,
     AuthModule,

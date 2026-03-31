@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 import { Hotel } from '../../database/models/hotel.model';
+import { HotelImage } from '../../database/models/hotel-image.model';
 import { HotelRepository } from './hotel.repository';
-import { CreateHotelInput, UpdateHotelInput, SearchHotelsInput } from './dto/hotel.input';
+import { SearchHotelsInput } from './dto/hotel.input';
+import { CreateHotelWithUrlsInput, UpdateHotelWithUrlsInput } from './dto/hotel-with-urls.input';
 
 /**
  * Hotel Service - Handles all hotel business logic and GraphQL error handling
@@ -13,81 +15,6 @@ import { CreateHotelInput, UpdateHotelInput, SearchHotelsInput } from './dto/hot
 @Injectable()
 export class HotelService {
   constructor(private readonly hotelRepository: HotelRepository) {}
-
-  /**
-   * Create a new hotel
-   * 
-   * @param createHotelInput - Hotel data
-   * @param ownerId - Hotel owner ID
-   * @returns Created hotel
-   * 
-   * @throws GraphQLError - If creation fails
-   */
-  async create(createHotelInput: CreateHotelInput, ownerId: number): Promise<Hotel> {
-    try {
-      // Validate input
-      if (!createHotelInput.name || createHotelInput.name.trim().length === 0) {
-        throw new GraphQLError('Hotel name is required', {
-          extensions: {
-            code: 'BAD_REQUEST',
-            field: 'name'
-          }
-        });
-      }
-
-      if (!createHotelInput.address || createHotelInput.address.trim().length === 0) {
-        throw new GraphQLError('Hotel address is required', {
-          extensions: {
-            code: 'BAD_REQUEST',
-            field: 'address'
-          }
-        });
-      }
-
-      if (!createHotelInput.city || createHotelInput.city.trim().length === 0) {
-        throw new GraphQLError('Hotel city is required', {
-          extensions: {
-            code: 'BAD_REQUEST',
-            field: 'city'
-          }
-        });
-      }
-
-      const hotelData = {
-        ...createHotelInput,
-        name: createHotelInput.name.trim(),
-        address: createHotelInput.address.trim(),
-        city: createHotelInput.city.trim(),
-        state: createHotelInput.state?.trim() || createHotelInput.city.trim(),
-        country: createHotelInput.country?.trim() || createHotelInput.city.trim(),
-        postalCode: createHotelInput.postalCode?.trim() || '',
-        phone: createHotelInput.phone?.trim() || '',
-        email: createHotelInput.email?.trim() || '',
-        website: createHotelInput.website?.trim() || '',
-        description: createHotelInput.description?.trim() || '',
-        latitude: createHotelInput.latitude,
-        longitude: createHotelInput.longitude,
-        ownerId,
-        isActive: true,
-        isVerified: false,
-        rating: 0,
-        totalReviews: 0
-      };
-
-      return await this.hotelRepository.create(hotelData);
-    } catch (error) {
-      // Re-throw GraphQL errors
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
-      
-      throw new GraphQLError('Failed to create hotel', {
-        extensions: {
-          code: 'INTERNAL_SERVER_ERROR'
-        }
-      });
-    }
-  }
 
   /**
    * Get a specific hotel by its ID
@@ -325,79 +252,6 @@ export class HotelService {
   }
 
   /**
-   * Update hotel details
-   * 
-   * @param id - Hotel ID
-   * @param updateData - Update data
-   * @param ownerId - Owner ID for authorization
-   * @returns Updated hotel
-   */
-  async update(id: number, updateData: UpdateHotelInput, ownerId: number): Promise<Hotel> {
-    try {
-      // Validate ID
-      if (!id || id <= 0) {
-        throw new GraphQLError('Invalid hotel ID provided', {
-          extensions: {
-            code: 'BAD_REQUEST',
-            field: 'id'
-          }
-        });
-      }
-      
-      // Validate owner ID
-      if (!ownerId || ownerId <= 0) {
-        throw new GraphQLError('Invalid owner ID provided', {
-          extensions: {
-            code: 'BAD_REQUEST',
-            field: 'ownerId'
-          }
-        });
-      }
-      
-      // Validate update data
-      if (!updateData) {
-        throw new GraphQLError('Update data is required', {
-          extensions: {
-            code: 'BAD_REQUEST'
-          }
-        });
-      }
-      
-      // Check if hotel exists and belongs to owner
-      const existingHotel = await this.hotelRepository.findById(id);
-      if (!existingHotel) {
-        throw new GraphQLError('Hotel not found', {
-          extensions: {
-            code: 'NOT_FOUND'
-          }
-        });
-      }
-
-      if (existingHotel.ownerId !== ownerId) {
-        throw new GraphQLError('You can only update your own hotels', {
-          extensions: {
-            code: 'FORBIDDEN'
-          }
-        });
-      }
-      
-      return await this.hotelRepository.update(id, updateData);
-    } catch (error) {
-      // Re-throw GraphQL errors
-      if (error instanceof GraphQLError) {
-        throw error;
-      }
-      
-      // Handle unknown errors
-      throw new GraphQLError('Failed to update hotel', {
-        extensions: {
-          code: 'INTERNAL_SERVER_ERROR'
-        }
-      });
-    }
-  }
-
-  /**
    * Delete hotel
    * 
    * @param id - Hotel ID
@@ -565,6 +419,184 @@ export class HotelService {
           code: 'INTERNAL_SERVER_ERROR'
         }
       });
+    }
+  }
+
+  /**
+   * Create a new hotel with image URLs
+   * 
+   * @param input - Hotel data with image URLs
+   * @param userId - User ID for authorization
+   * @returns Created hotel
+   * 
+   * @throws GraphQLError - If creation fails
+   */
+  async createWithUrls(input: CreateHotelWithUrlsInput, userId: number): Promise<Hotel> {
+    try {
+      // Extract images from input
+      const { images, ...hotelData } = input;
+
+      // Create the hotel first
+      const hotel = await this.hotelRepository.create({ ...hotelData, ownerId: userId });
+
+      // If images are provided, create hotel image records
+      if (images && images.images && images.images.length > 0) {
+        await this.createHotelImages(hotel.id, images.images);
+      }
+
+      // Return the complete hotel with images
+      return await this.hotelRepository.findById(hotel.id);
+    } catch (error) {
+      // Re-throw GraphQL errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      
+      // Handle unknown errors
+      throw new GraphQLError('Failed to create hotel with images', {
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR',
+        },
+      });
+    }
+  }
+
+  /**
+   * Update a hotel with image URLs
+   * 
+   * @param id - Hotel ID
+   * @param input - Hotel update data with image URLs
+   * @param userId - User ID for authorization
+   * @returns Updated hotel
+   * 
+   * @throws GraphQLError - If update fails
+   */
+  async updateWithUrls(id: number, input: UpdateHotelWithUrlsInput, userId: number): Promise<Hotel> {
+    try {
+      // Check if hotel exists and user owns it
+      const existingHotel = await this.hotelRepository.findById(id);
+      if (!existingHotel) {
+        throw new GraphQLError('Hotel not found', {
+          extensions: {
+            code: 'NOT_FOUND',
+          },
+        });
+      }
+
+      if (existingHotel.ownerId !== userId) {
+        throw new GraphQLError('You can only modify your own hotels', {
+          extensions: {
+            code: 'FORBIDDEN',
+          },
+        });
+      }
+
+      // Extract image data from input
+      const { newImages, deleteImageIds, ...hotelData } = input;
+
+      // Update hotel basic information
+      await this.hotelRepository.update(id, hotelData);
+
+      // Handle image updates
+      await this.updateHotelImages(id, { newImages, deleteImageIds });
+
+      // Return the updated hotel with images
+      return await this.hotelRepository.findById(id);
+    } catch (error) {
+      // Re-throw GraphQL errors
+      if (error instanceof GraphQLError) {
+        throw error;
+      }
+      
+      // Handle unknown errors
+      throw new GraphQLError('Failed to update hotel with images', {
+        extensions: {
+          code: 'INTERNAL_SERVER_ERROR',
+        },
+      });
+    }
+  }
+
+  /**
+   * Create hotel image records from URLs
+   * 
+   * @param hotelId - Hotel ID
+   * @param images - Array of image data with URLs
+   */
+  private async createHotelImages(hotelId: number, images: any[]): Promise<void> {
+    const imagePromises = images.map(async (imageData, index) => {
+      return await HotelImage.create({
+        hotelId,
+        url: imageData.url,
+        altText: imageData.altText,
+        caption: imageData.caption,
+        isPrimary: imageData.isPrimary || index === 0, // First image as primary if not specified
+        sortOrder: imageData.sortOrder || index + 1,
+      });
+    });
+
+    await Promise.all(imagePromises);
+
+    // Ensure only one primary image
+    await this.ensureSinglePrimaryImage(hotelId);
+  }
+
+  /**
+   * Update hotel images - add new ones and delete specified ones
+   * 
+   * @param hotelId - Hotel ID
+   * @param imageData - Object containing new images and delete IDs
+   */
+  private async updateHotelImages(hotelId: number, imageData: { newImages?: any; deleteImageIds?: number[] }): Promise<void> {
+    // Delete specified images
+    if (imageData.deleteImageIds && imageData.deleteImageIds.length > 0) {
+      await this.deleteHotelImages(imageData.deleteImageIds);
+    }
+
+    // Add new images
+    if (imageData.newImages && imageData.newImages.images && imageData.newImages.images.length > 0) {
+      await this.createHotelImages(hotelId, imageData.newImages.images);
+    }
+  }
+
+  /**
+   * Delete hotel images by IDs
+   * 
+   * @param imageIds - Array of image IDs to delete
+   */
+  private async deleteHotelImages(imageIds: number[]): Promise<void> {
+    await HotelImage.destroy({
+      where: {
+        id: imageIds,
+      },
+    });
+  }
+
+  /**
+   * Ensure only one primary image exists for the hotel
+   * 
+   * @param hotelId - Hotel ID
+   */
+  private async ensureSinglePrimaryImage(hotelId: number): Promise<void> {
+    const primaryImages = await HotelImage.findAll({
+      where: {
+        hotelId,
+        isPrimary: true,
+      },
+    });
+
+    if (primaryImages.length > 1) {
+      // Keep the first one as primary, set others to false
+      const [keepPrimary, ...others] = primaryImages;
+      
+      await Promise.all(
+        others.map(image => 
+          HotelImage.update(
+            { isPrimary: false },
+            { where: { id: image.id } }
+          )
+        )
+      );
     }
   }
 }

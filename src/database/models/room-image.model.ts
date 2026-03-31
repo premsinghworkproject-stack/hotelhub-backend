@@ -1,14 +1,14 @@
 import { Column, Model, DataType, Table, BelongsTo } from 'sequelize-typescript';
 import { Field, ObjectType, ID } from '@nestjs/graphql';
-import { Hotel } from './hotel.model';
+import { Room } from './room.model';
 import { ImageUrlTransformer } from '../../common/transformers/image-url.transformer';
 
 @ObjectType()
 @Table({
-  tableName: 'hotel_images',
+  tableName: 'room_images',
   timestamps: true,
 })
-export class HotelImage extends Model<HotelImage> {
+export class RoomImage extends Model<RoomImage> {
   @Field(() => ID)
   @Column({
     type: DataType.INTEGER,
@@ -50,7 +50,7 @@ export class HotelImage extends Model<HotelImage> {
     allowNull: false,
     defaultValue: false,
   })
-  isPrimary: boolean; // Main hotel image
+  isPrimary: boolean; // Main room image
 
   @Field()
   @Column({
@@ -72,11 +72,11 @@ export class HotelImage extends Model<HotelImage> {
     type: DataType.INTEGER,
     allowNull: false,
     references: {
-      model: 'hotels',
+      model: 'rooms',
       key: 'id',
     },
   })
-  hotelId: number;
+  roomId: number;
 
   @Field(() => Date)
   @Column({
@@ -95,6 +95,6 @@ export class HotelImage extends Model<HotelImage> {
   updatedAt: Date;
 
   // Relationships
-  @BelongsTo(() => Hotel, { foreignKey: 'hotelId' })
-  hotel: Hotel;
+  @BelongsTo(() => Room, { foreignKey: 'roomId' })
+  room: Room;
 }

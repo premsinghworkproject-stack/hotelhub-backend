@@ -70,17 +70,19 @@ export class Hotel extends Model<Hotel> {
   })
   postalCode: string;
 
-  @Field()
+  @Field({ nullable: true })
   @Column({
     type: DataType.DECIMAL(10, 8),
     allowNull: false,
+    defaultValue: 0.0,
   })
   latitude: number;
 
-  @Field()
+  @Field({ nullable: true })
   @Column({
     type: DataType.DECIMAL(11, 8),
     allowNull: false,
+    defaultValue: 0.0,
   })
   longitude: number;
 
@@ -105,7 +107,7 @@ export class Hotel extends Model<Hotel> {
   })
   website?: string;
 
-  @Field()
+  @Field({ nullable: true })
   @Column({
     type: DataType.DECIMAL(3, 2),
     allowNull: false,
@@ -113,7 +115,7 @@ export class Hotel extends Model<Hotel> {
   })
   rating: number;
 
-  @Field()
+  @Field({ nullable: true })
   @Column({
     type: DataType.INTEGER,
     allowNull: false,
@@ -220,9 +222,11 @@ export class Hotel extends Model<Hotel> {
   @HasMany(() => Booking, { foreignKey: 'hotelId' })
   bookings: Booking[];
 
+  @Field(() => [RoomType])
   @HasMany(() => RoomType, { foreignKey: 'hotelId' })
   roomTypes: RoomType[];
 
+  @Field(() => [HotelImage])
   @HasMany(() => HotelImage, { foreignKey: 'hotelId' })
   images: HotelImage[];
 

@@ -1,13 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsString, IsNotEmpty, IsOptional, IsNumber, IsEnum, Min, Max, IsBoolean } from 'class-validator';
-
-export enum RoomStatus {
-  AVAILABLE = 'AVAILABLE',
-  OCCUPIED = 'OCCUPIED',
-  MAINTENANCE = 'MAINTENANCE',
-  OUT_OF_ORDER = 'OUT_OF_ORDER',
-  CLEANING = 'CLEANING'
-}
+import { RoomStatus } from '../../../database/models/room.model';
 
 @InputType()
 export class CreateRoomInput {

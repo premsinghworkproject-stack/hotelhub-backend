@@ -33,7 +33,7 @@ export class RoomResolver {
   }
 
   @Query(() => [Room])
-  async searchRooms(@Args() searchInput: SearchRoomsInput): Promise<Room[]> {
+  async searchRooms(@Args('searchInput') searchInput: SearchRoomsInput): Promise<Room[]> {
     return await this.roomService.search(searchInput);
   }
 

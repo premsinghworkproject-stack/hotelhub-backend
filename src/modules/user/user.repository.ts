@@ -15,17 +15,27 @@ export class UserRepository {
       name: createUserDto.name,
       email: createUserDto.email,
       passwordLength: createUserDto.password?.length,
-      hasPassword: !!createUserDto.password
+      hasPassword: !!createUserDto.password,
+      userType: createUserDto.userType,
+      companyName: createUserDto.companyName
     });
     
     const user = await this.userModel.create({
       name: createUserDto.name,
       email: createUserDto.email,
       password: createUserDto.password,
+      userType: createUserDto.userType,
+      companyName: createUserDto.companyName,
     });
     
-    console.log('User created with password field:', !!user.password);
-    console.log('Saved password length:', user.password?.length);
+    console.log('User created with:', {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      userType: user.userType,
+      companyName: user.companyName,
+      hasPassword: !!user.password
+    });
     
     return user;
   }
